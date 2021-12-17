@@ -216,3 +216,6 @@ cython_debug/
 
 # test csv files of followers
 *.csv
+
+# testing files
+study.txt

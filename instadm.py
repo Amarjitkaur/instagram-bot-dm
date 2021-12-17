@@ -1,5 +1,5 @@
 import requests
-import random
+from requests.api import head
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager as CM
 from selenium.webdriver.common.by import By
@@ -7,8 +7,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-from random import randint, uniform
+from random import randint, uniform , choice
 from time import time, sleep
+from functools import lru_cache
 import logging
 import sqlite3
 
@@ -51,7 +52,7 @@ class InstaDM(object):
             options.add_argument("--headless")
 
         mobile_emulation = {
-            "userAgent": "Mozilla/5.0 (Linux; U; Android 2.2; en-sa; HTC_DesireHD_A9191 Build/FRF91) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1"
+            "userAgent": choice(USER_AGENTS)
         }
         options.add_experimental_option("mobileEmulation", mobile_emulation)
 
@@ -262,7 +263,28 @@ class InstaDM(object):
         except Exception as e:
             logging.error(e)
             return False
-    
+
+    @lru_cache
+    def getAuthHeaders(self):
+        cookie = ""
+        for i in self.driver.get_cookies():
+            cookie += i['name'] +'='+i['value'] + ';'
+
+        headers = {
+            'cookie':cookie,
+            'x-ig-app-id': '1217981644879628'
+        }
+        return headers
+
+    @lru_cache
+    def getUserIdFromUserName(self , username):
+        print('============================ Getting  user id ============================')
+        headers = self.getAuthHeaders()
+        res = requests.get('https://www.instagram.com/{}/?__a=1'.format(username) , headers=headers)
+        user_id = res.json().get('graphql')['user']['id']
+        print("============================ User id done ============================")
+        return user_id
+
     def getFollowers(self , user , count = 100 , max_id=''):
         '''
         user  : IG username
@@ -273,24 +295,9 @@ class InstaDM(object):
             raise ValueError("Value of count should be smaller than 10000")
 
         try:
-            # create cookie header for authentication
-            cookie = ""
-            for i in self.driver.get_cookies():
-                cookie += i['name'] +'='+i['value'] + ';'
-
-            headers = {
-                'cookie':cookie,
-                'x-ig-app-id': '1217981644879628'
-            }
-            # get user id
-            print('============================ Getting  user id ============================')
-            res = requests.get('https://www.instagram.com/{}/?__a=1'.format(user) , headers=headers)
-            user_id = res.json().get('graphql')['user']['id']
-            print("============================ User id done ============================")
-
-            
+            user_id = self.getUserIdFromUserName(user)            
+            headers = self.getAuthHeaders()
             url = "https://i.instagram.com/api/v1/friendships/{}/followers/?count={}&max_id={}&search_surface=follow_list_page".format(user_id, count ,max_id)
-            print(headers , url)
             print("============================ Getting user followers ============================")
             res = requests.get(url , headers=headers)
             followers = res.json().get('users')
