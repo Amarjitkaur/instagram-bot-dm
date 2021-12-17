@@ -1,3 +1,5 @@
+import requests
+import random
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager as CM
 from selenium.webdriver.common.by import By
@@ -11,6 +13,15 @@ import logging
 import sqlite3
 
 DEFAULT_IMPLICIT_WAIT = 30
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Linux; U; Android 4.0.3; ko-kr; LG-L160L Build/IML74K) AppleWebkit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30",
+    "Mozilla/5.0 (Linux; U; Android 4.0.3; de-ch; HTC Sensation Build/IML74K) AppleWebKit/534.30 (KHTML, like Gecko) Version/4.0 Mobile Safari/534.30",
+    "Mozilla/5.0 (Linux; U; Android 2.3.5; zh-cn; HTC_IncredibleS_S710e Build/GRJ90) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1",
+    "Mozilla/5.0 (Linux; U; Android 2.3.5; en-us; HTC Vision Build/GRI40) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1",
+    "Mozilla/5.0 (Linux; U; Android 2.3.3; zh-tw; HTC_Pyramid Build/GRI40) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1",
+    "Mozilla/5.0 (Linux; U; Android 2.2; en-sa; HTC_DesireHD_A9191 Build/FRF91) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1"
+]
 
 class InstaDM(object):
 
@@ -40,7 +51,7 @@ class InstaDM(object):
             options.add_argument("--headless")
 
         mobile_emulation = {
-            "userAgent": 'Mozilla/5.0 (Linux; Android 4.0.3; HTC One X Build/IML74K) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.133 Mobile Safari/535.19'
+            "userAgent": "Mozilla/5.0 (Linux; U; Android 2.2; en-sa; HTC_DesireHD_A9191 Build/FRF91) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1"
         }
         options.add_experimental_option("mobileEmulation", mobile_emulation)
 
@@ -248,6 +259,45 @@ class InstaDM(object):
 
             return True
         
+        except Exception as e:
+            logging.error(e)
+            return False
+    
+    def getFollowers(self , user , count = 100 , max_id=''):
+        '''
+        user  : IG username
+        count : number of followers to get (MAX = 10000)
+        max_id : pass max_id to get next results
+        '''
+        if count > 10000:
+            raise ValueError("Value of count should be smaller than 10000")
+
+        try:
+            # create cookie header for authentication
+            cookie = ""
+            for i in self.driver.get_cookies():
+                cookie += i['name'] +'='+i['value'] + ';'
+
+            headers = {
+                'cookie':cookie,
+                'x-ig-app-id': '1217981644879628'
+            }
+            # get user id
+            print('============================ Getting  user id ============================')
+            res = requests.get('https://www.instagram.com/{}/?__a=1'.format(user) , headers=headers)
+            user_id = res.json().get('graphql')['user']['id']
+            print("============================ User id done ============================")
+
+            
+            url = "https://i.instagram.com/api/v1/friendships/{}/followers/?count={}&max_id={}&search_surface=follow_list_page".format(user_id, count ,max_id)
+            print(headers , url)
+            print("============================ Getting user followers ============================")
+            res = requests.get(url , headers=headers)
+            followers = res.json().get('users')
+            max_id = res.json().get('next_max_id')
+            print('============================ Getting followers done ============================')
+            return (followers, max_id)
+
         except Exception as e:
             logging.error(e)
             return False
