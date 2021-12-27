@@ -214,8 +214,9 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# test csv files of followers
-*.csv
-
 # testing files
+.vscode/
+*.csv
 study.txt
+bot_accounts.json
+test.py

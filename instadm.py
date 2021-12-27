@@ -1,5 +1,4 @@
 import requests
-from requests.api import head
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager as CM
 from selenium.webdriver.common.by import By
@@ -7,7 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-from random import randint, uniform , choice
+from random import randint, uniform
 from time import time, sleep
 from functools import lru_cache
 import logging
@@ -24,6 +23,7 @@ USER_AGENTS = [
     "Mozilla/5.0 (Linux; U; Android 2.2; en-sa; HTC_DesireHD_A9191 Build/FRF91) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1"
 ]
 
+# PROXY = ''
 class InstaDM(object):
 
     def __init__(self, username, password, headless=True, instapy_workspace=None, profileDir=None):
@@ -39,7 +39,8 @@ class InstaDM(object):
             "name": "((//div[@aria-labelledby]/div/span//img[@data-testid='user-avatar'])[1]//..//..//..//div[2]/div[2]/div)[1]",
             "next_button": "//button/*[text()='Next']",
             "textarea": "//textarea[@placeholder]",
-            "send": "//button[text()='Send']"
+            "send": "//button[text()='Send']",
+            "not_now_notification":"/html/body/div[6]/div/div/div/div[3]/button[2]",
         }
 
         # Selenium config
@@ -52,9 +53,17 @@ class InstaDM(object):
             options.add_argument("--headless")
 
         mobile_emulation = {
-            "userAgent": choice(USER_AGENTS)
+            "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
+            # "userAgent": choice(USER_AGENTS)
         }
         options.add_experimental_option("mobileEmulation", mobile_emulation)
+
+        # webdriver.DesiredCapabilities.CHROME['proxy'] = {
+        #     "httpProxy":PROXY,
+        #     "ftpProxy":PROXY,
+        #     "sslProxy":PROXY,
+        #     "proxyType":"MANUAL",
+        # }
 
         self.driver = webdriver.Chrome(executable_path=CM().install(), options=options)
         self.driver.set_window_position(0, 0)
@@ -100,7 +109,7 @@ class InstaDM(object):
             self.__random_sleep__(3, 5)
         if self.__wait_for_element__(self.selectors['home_to_login_button'], 'xpath', 10):
             self.__get_element__(self.selectors['home_to_login_button'], 'xpath').click()
-            self.__random_sleep__(5, 7)
+            self.__random_sleep__(3, 5)
 
         # login
         logging.info(f'Login with {username}')
@@ -111,7 +120,7 @@ class InstaDM(object):
             self.driver.find_element_by_name(self.selectors['username_field']).send_keys(username)
             self.driver.find_element_by_name(self.selectors['password_field']).send_keys(password)
             self.__get_element__(self.selectors['button_login'], 'xpath').click()
-            self.__random_sleep__()
+            self.__random_sleep__(3, 5)
             if self.__wait_for_element__(self.selectors['login_check'], 'xpath', 10):
                 print('Login Successful')
             else:
@@ -131,11 +140,11 @@ class InstaDM(object):
         # Go to page and type message
         if self.__wait_for_element__(self.selectors['next_button'], "xpath"):
             self.__get_element__(self.selectors['next_button'], "xpath").click()
-            self.__random_sleep__()
+            self.__random_sleep__(3 , 5)
 
         if self.__wait_for_element__(self.selectors['textarea'], "xpath"):
             self.__type_slow__(self.selectors['textarea'], "xpath", message)
-            self.__random_sleep__()
+            self.__random_sleep__(3 , 5)
 
         if self.__wait_for_element__(self.selectors['send'], "xpath"):
             self.__get_element__(self.selectors['send'], "xpath").click()
@@ -146,12 +155,14 @@ class InstaDM(object):
         logging.info(f'Send message to {user}')
         print(f'Send message to {user}')
         self.driver.get('https://www.instagram.com/direct/new/?hl=en')
-        self.__random_sleep__(5, 7)
-
+        self.__random_sleep__(3, 5)
+        if self.__wait_for_element__(self.selectors['not_now_notification'], 'xpath', 3):
+            self.__get_element__(self.selectors['not_now_notification'], 'xpath').click()
+            self.__random_sleep__(3, 5)
         try:
             self.__wait_for_element__(self.selectors['search_user'], "name")
             self.__type_slow__(self.selectors['search_user'], "name", user)
-            self.__random_sleep__(7, 10)
+            self.__random_sleep__(3, 5)
 
             if greeting != None:
                 greeting = self.createCustomGreeting(greeting)
@@ -160,7 +171,7 @@ class InstaDM(object):
             elements = self.driver.find_elements_by_xpath(self.selectors['select_user'].format(user))
             if elements and len(elements) > 0:
                 elements[0].click()
-                self.__random_sleep__()
+                self.__random_sleep__(3 , 5)
 
                 if greeting != None:
                     self.typeMessage(user, greeting + message)
@@ -170,7 +181,7 @@ class InstaDM(object):
                 if self.conn is not None:
                     self.cursor.execute('INSERT INTO message (username, message) VALUES(?, ?)', (user, message))
                     self.conn.commit()
-                self.__random_sleep__(50, 60)
+                self.__random_sleep__(2 , 5)
 
                 return True
 
@@ -189,6 +200,9 @@ class InstaDM(object):
         print(f'Send group message to {users}')
         self.driver.get('https://www.instagram.com/direct/new/?hl=en')
         self.__random_sleep__(5, 7)
+        if self.__wait_for_element__(self.selectors['not_now_notification'], 'xpath', 10):
+            self.__get_element__(self.selectors['not_now_notification'], 'xpath').click()
+            self.__random_sleep__(3, 5)
 
         try:
             usersAndMessages = []
@@ -215,7 +229,8 @@ class InstaDM(object):
                     INSERT OR IGNORE INTO message (username, message) VALUES(?, ?)
                 """, usersAndMessages)
                 self.conn.commit()
-            self.__random_sleep__(50, 60)
+            # self.__random_sleep__(50, 60)
+            # self.__random_sleep__(50, 60)
 
             return True
         
@@ -285,14 +300,13 @@ class InstaDM(object):
         print("============================ User id done ============================")
         return user_id
 
-    def getFollowers(self , user , count = 100 , max_id=''):
+    def getFollowers(self , user, max_id=''):
         '''
         user  : IG username
-        count : number of followers to get (MAX = 10000)
+        count : number of followers to get per api call (MAX = 10000)
         max_id : pass max_id to get next results
         '''
-        if count > 10000:
-            raise ValueError("Value of count should be smaller than 10000")
+        count = 10000 # number of accounts to fetch in each api call
 
         try:
             user_id = self.getUserIdFromUserName(user)            
