@@ -220,3 +220,5 @@ cython_debug/
 study.txt
 bot_accounts.json
 test.py
+creds/
+db/*.db

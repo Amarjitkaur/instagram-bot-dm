@@ -1,9 +1,22 @@
 import time
-import csv
+import sqlite3
 from instadm import InstaDM
+
+conn = sqlite3.connect('db/instabot.db')
+cursor = conn.cursor()
+
 
 def get_followers(username: str, password: str, user: str, count: int = 1000,
                   headless: bool = True, max_error_count: int = 5) -> str:
+    '''
+    --- get followers and save to db ---
+    username = username for authentication
+    password = password for authentication
+    user = account to scrap data from
+    count = number of followers to scrap
+    headless = chromedriver headless option
+    max_error_count = number of times to ignore error while fetching followers
+    '''
     start_time = time.time()
     insta = InstaDM(username=username,password=password,headless=headless) 
     res = insta.getFollowers(user=user)
@@ -31,6 +44,7 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
         else:
             error_count += 1
 
+<<<<<<< HEAD
     fields = ['id', 'username']  # fields to add in csv file
     rows = [
         [i['pk'], i['username']] for i in followers if not i['is_verified']
@@ -43,9 +57,22 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
         csvwriter = csv.writer(csvfile)
         csvwriter.writerow(fields)
         csvwriter.writerows(rows)
+=======
+    usernames = [i.get('username') for i in followers]
+    for i in usernames:
+        try:
+            cursor.execute("""
+            insert into followers (username, scraped_from) values(?, ?)
+            """, (i, user))
+        except Exception as e:
+            print(e, i)
+            continue
+    conn.commit()
+>>>>>>> c43b9fd00735657ba9951b5083e5cc00e3626b2d
 
     print("Fetched {} followers in {} seconds".format(len(followers),time.time() - start_time))
     insta.teardown()
+<<<<<<< HEAD
     return filename
 
 
@@ -54,3 +81,6 @@ def new_func(get_followers):
     print(a)
 
 new_func(get_followers)
+=======
+    # return filename
+>>>>>>> c43b9fd00735657ba9951b5083e5cc00e3626b2d
