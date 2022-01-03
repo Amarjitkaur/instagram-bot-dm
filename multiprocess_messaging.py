@@ -5,7 +5,7 @@ from create_users_list import get_accounts_list_per_bot
 from instadm import InstaDM
 
 with open('bot_accounts.json', 'r') as bots_file:
-    bot_accounts = json.load(bots_file)
+    bot_accounts = json.load(bots_file) 
 
 
 def task(val: dict) -> None:
@@ -27,7 +27,7 @@ def task(val: dict) -> None:
 
         insta = InstaDM(username=bot, password=passowrd, headless=False)
         for user in accounts:
-            insta.sendMessage(user=user, message="hey")
+            insta.sendMessage(user=user, message="hey ")
 
 
 if __name__ == '__main__':
@@ -37,6 +37,7 @@ if __name__ == '__main__':
     accounts_lists = get_accounts_list_per_bot(usernames, bots)
     print('starting ==========')
     start = time.time()
+    
     with multiprocessing.Pool(len(bot_accounts)) as p:
         p.map(task, accounts_lists)
     print(time.time() - start)
