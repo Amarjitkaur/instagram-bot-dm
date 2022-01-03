@@ -25,14 +25,23 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
         )
     res = insta.getFollowers(user=user)
     if res:
-        followers = res[0][:count]
+        fetched_followers = len(res[0][:count])
         next_max_id = res[1]
     else:
         print(res)
         return
+    for i in res[0][:count]:
+        try:
+            cursor.execute("""
+            INSERT INTO followers(username, scraped_from)
+            VALUES(?,?)
+            """, (i.get('username'), user))
+        except Exception as e:
+            print(e, i.get('username'))
+    conn.commit()
     error_count = 0
     call_no = 1
-    while next_max_id and len(followers) < count:
+    while next_max_id and fetched_followers < count:
         if error_count == max_error_count:
             break
         res = insta.getFollowers(user=user, max_id=next_max_id)
@@ -44,27 +53,26 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
                     call_no,
                     error_count)
                 )
+            for i in res[0][:count]:
+                try:
+                    cursor.execute("""
+                    INSERT INTO followers(username, scraped_from)
+                    VALUES(?,?)
+                    """, (i.get('username'), user))
+                except Exception as e:
+                    print(e, i.get('username'))
+            conn.commit()
+
             next_max_id = res[1]
-            followers.extend(res[0][:count])
+            fetched_followers += len(res[0][:count])
             call_no += 1
         else:
             error_count += 1
 
-    usernames = [i.get('username') for i in followers]
-    for i in usernames:
-        try:
-            cursor.execute("""
-            insert into followers (username, scraped_from) values(?, ?)
-            """, (i, user))
-        except Exception as e:
-            print(e, i)
-            continue
-    conn.commit()
-
     print(
         "Fetched {} followers in {} seconds"
         .format(
-            len(followers),
+            fetched_followers,
             time.time() - start_time
             )
         )
