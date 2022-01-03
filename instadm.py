@@ -12,6 +12,8 @@ from functools import lru_cache
 import logging
 import sqlite3
 
+from firebase import save_message
+
 DEFAULT_IMPLICIT_WAIT = 30
 
 USER_AGENTS = [
@@ -73,28 +75,29 @@ class InstaDM(object):
         self.instapy_workspace = instapy_workspace
         self.conn = None
         self.cursor = None
-        if self.instapy_workspace is not None:
-            self.conn = sqlite3.connect(self.instapy_workspace + "InstaPy/db/instapy.db")
-            self.cursor = self.conn.cursor()
+        self.conn = sqlite3.connect("db/instabot.db")
+        self.cursor = self.conn.cursor()
 
-            cursor = self.conn.execute("""
-                SELECT count(*)
-                FROM sqlite_master
-                WHERE type='table'
-                AND name='message';
+        cursor = self.conn.execute("""
+            SELECT count(*)
+            FROM sqlite_master
+            WHERE type='table'
+            AND name='followers';
+        """)
+        count = cursor.fetchone()[0]
+
+        if count == 0:
+            self.conn.execute("""
+                CREATE TABLE "followers" (
+                    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+                    "username"    TEXT NOT NULL UNIQUE,
+                    "scraped_from"    TEXT DEFAULT NULL,
+                    "message_sent"    BOOLEAN DEFAULT 0
+                );
             """)
-            count = cursor.fetchone()[0]
-
-            if count == 0:
-                self.conn.execute("""
-                    CREATE TABLE "message" (
-                        "username"    TEXT NOT NULL UNIQUE,
-                        "message"    TEXT DEFAULT NULL,
-                        "sent_message_at"    TIMESTAMP
-                    );
-                """)
 
         try:
+            self.__random_sleep__(1, 2)
             self.login(username, password)
         except Exception as e:
             logging.error(e)
@@ -102,6 +105,7 @@ class InstaDM(object):
 
     def login(self, username, password):
         # homepage
+        self.bot_name = username
         self.driver.get('https://instagram.com/?hl=en')
         self.__random_sleep__(3, 5)
         if self.__wait_for_element__(self.selectors['accept_cookies'], 'xpath', 10):
@@ -178,9 +182,7 @@ class InstaDM(object):
                 else:
                     self.typeMessage(user, message)
                 
-                if self.conn is not None:
-                    self.cursor.execute('INSERT INTO message (username, message) VALUES(?, ?)', (user, message))
-                    self.conn.commit()
+                save_message(self.bot_name, user, message)
                 self.__random_sleep__(2 , 5)
 
                 return True
@@ -207,8 +209,6 @@ class InstaDM(object):
         try:
             usersAndMessages = []
             for user in users:
-                if self.conn is not None:
-                    usersAndMessages.append((user, message))
 
                 self.__wait_for_element__(self.selectors['search_user'], "name")
                 self.__type_slow__(self.selectors['search_user'], "name", user)
@@ -223,12 +223,6 @@ class InstaDM(object):
                     print(f'User {user} not found! Skipping.')
 
             self.typeMessage(user, message)
-
-            if self.conn is not None:
-                self.cursor.executemany("""
-                    INSERT OR IGNORE INTO message (username, message) VALUES(?, ?)
-                """, usersAndMessages)
-                self.conn.commit()
             # self.__random_sleep__(50, 60)
             # self.__random_sleep__(50, 60)
 
@@ -266,11 +260,6 @@ class InstaDM(object):
                 self.__random_sleep__(3, 5)
                 print('Message sent successfully')
             
-            if self.conn is not None:
-                self.cursor.executemany("""
-                    INSERT OR IGNORE INTO message (username, message) VALUES(?, ?)
-                """, usersAndMessages)
-                self.conn.commit()
             self.__random_sleep__(50, 60)
 
             return True

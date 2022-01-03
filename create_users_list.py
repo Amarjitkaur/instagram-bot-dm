@@ -24,7 +24,7 @@ def get_accounts_per_bot(total_users: int, total_bots: int) -> int:
 def get_accounts_list_per_bot(
         usernames: list,
         bot_accounts: list) -> AccountsPerBot:
-    '''return list of dicts where each bot will be assigned
+    '''return generator object with list of dicts where each bot will be assigned
         list of equal number of accounts to which that will
         be responsible to send messages
         after iterating result: [

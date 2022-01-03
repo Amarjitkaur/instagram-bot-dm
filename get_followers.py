@@ -1,11 +1,15 @@
 import time
-import csv
+import sqlite3
 from instadm import InstaDM
+
+conn = sqlite3.connect('db/instabot.db')
+cursor = conn.cursor()
 
 
 def get_followers(username: str, password: str, user: str, count: int = 1000,
                   headless: bool = True, max_error_count: int = 5) -> str:
     '''
+    --- get followers and save to db ---
     username = username for authentication
     password = password for authentication
     user = account to scrap data from
@@ -46,16 +50,16 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
         else:
             error_count += 1
 
-    fields = ['id', 'username']  # fields to add in csv file
-    rows = [
-        [i['pk'], i['username']] for i in followers if not i['is_verified']
-        ]
-    filename = user + '__followers.csv'
-    print('Writing followers to {}'.format(filename))
-    with open(filename, 'w', encoding='utf-8', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(fields)
-        csvwriter.writerows(rows)
+    usernames = [i.get('username') for i in followers]
+    for i in usernames:
+        try:
+            cursor.execute("""
+            insert into followers (username, scraped_from) values(?, ?)
+            """, (i, user))
+        except Exception as e:
+            print(e, i)
+            continue
+    conn.commit()
 
     print(
         "Fetched {} followers in {} seconds"
@@ -65,4 +69,4 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
             )
         )
     insta.teardown()
-    return filename
+    # return filename
