@@ -28,7 +28,7 @@ USER_AGENTS = [
 # PROXY = ''
 class InstaDM(object):
 
-    def __init__(self, username, password, headless=True, instapy_workspace=None, profileDir=None):
+    def __init__(self, username, password, headless=True, instapy_workspace=None, profileDir=None, proxy=None):
         self.selectors = {
             "accept_cookies": "//button[text()='Accept All']",
             "home_to_login_button": "//button[text()='Log In']",
@@ -59,14 +59,16 @@ class InstaDM(object):
             # "userAgent": choice(USER_AGENTS)
         }
         options.add_experimental_option("mobileEmulation", mobile_emulation)
-
+        print(proxy,"===============================")
         # webdriver.DesiredCapabilities.CHROME['proxy'] = {
-        #     "httpProxy":PROXY,
-        #     "ftpProxy":PROXY,
-        #     "sslProxy":PROXY,
+        #     "httpProxy":proxy,
+        #     "ftpProxy":proxy,
+        #     "sslProxy":proxy,
         #     "proxyType":"MANUAL",
         # }
-
+        options.add_argument('--proxy-server=http://%s' % proxy)
+        # options.add_argument('--proxy-server=ftp://%s' % proxy)
+        # options.add_argument('--proxy-server=ssl://%s' % proxy)
         self.driver = webdriver.Chrome(executable_path=CM().install(), options=options)
         self.driver.set_window_position(0, 0)
         self.driver.set_window_size(414, 736)

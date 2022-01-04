@@ -1,4 +1,5 @@
 import multiprocessing
+import random
 import time
 import sqlite3
 import json
@@ -10,6 +11,17 @@ cursor = conn.cursor()
 
 with open('bot_accounts.json', 'r') as bots_file:
     bot_accounts = json.load(bots_file)
+
+with open('proxies_list.txt', 'r') as proxies_file:
+    proxies = proxies_file.read().split('\n')
+    proxies = [i for i in proxies if i]
+
+
+def get_proxy():
+    """
+    return a random proxy from proxies list
+    """
+    return random.choice(proxies)
 
 
 def task(val: dict) -> None:
@@ -61,7 +73,6 @@ def get_follower(scraped_from: str = None) -> tuple:
 def send_msg(bot):
     """
     get a follower from db and send message to him
-    and update status to sent
     """
     passowrd = [i.get('password')
                 for i in bot_accounts if i.get('username') == bot]
@@ -69,11 +80,31 @@ def send_msg(bot):
         print("No password found for bot - {}. skipping process".format(bot))
         return
     passowrd = passowrd[0]
-    insta = InstaDM(username=bot, password=passowrd, headless=False)
+    proxy = get_proxy()
+    if not proxy:
+        print("No proxy found. skipping process for bot", bot)
+        return
+    insta = InstaDM(
+        username=bot,
+        password=passowrd,
+        headless=False,
+        proxy=proxy
+        )
+    message_sent = 0
     follower = get_follower()
     while follower:
         print("Bot - {} sending message to {}".format(bot, follower[0]))
         insta.sendMessage(user=follower[0], message="hey")
+        message_sent += 1
+        if message_sent >= 50:
+            print(
+                """####################
+                Bot - {} has sent {} messages. updating proxy
+                ####################"""
+                .format(bot, message_sent))
+            insta.teardown()
+            send_msg(bot)
+            break
         follower = get_follower()
     print("Stopping bot : ", bot)
 

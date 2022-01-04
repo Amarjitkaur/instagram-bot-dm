@@ -222,3 +222,4 @@ bot_accounts.json
 test.py
 creds/
 db/*.db
+proxies_list.txt
