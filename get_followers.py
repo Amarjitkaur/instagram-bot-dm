@@ -44,20 +44,6 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
         else:
             error_count += 1
 
-<<<<<<< HEAD
-    fields = ['id', 'username']  # fields to add in csv file
-    rows = [
-        [i['pk'], i['username']] for i in followers if not i['is_verified']
-        ]
-
-    filename = user + '__followers.csv'
-    print('Writing followers to {}'.format(filename))
-
-    with open(filename, 'w', encoding='utf-8', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(fields)
-        csvwriter.writerows(rows)
-=======
     usernames = [i.get('username') for i in followers]
     for i in usernames:
         try:
@@ -68,19 +54,7 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
             print(e, i)
             continue
     conn.commit()
->>>>>>> c43b9fd00735657ba9951b5083e5cc00e3626b2d
 
     print("Fetched {} followers in {} seconds".format(len(followers),time.time() - start_time))
     insta.teardown()
-<<<<<<< HEAD
-    return filename
-
-
-def new_func(get_followers):
-    a = get_followers('a','b' , 'c')
-    print(a)
-
-new_func(get_followers)
-=======
     # return filename
->>>>>>> c43b9fd00735657ba9951b5083e5cc00e3626b2d
