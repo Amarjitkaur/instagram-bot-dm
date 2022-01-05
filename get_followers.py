@@ -7,7 +7,8 @@ cursor = conn.cursor()
 
 
 def get_followers(username: str, password: str, user: str, count: int = 1000,
-                  headless: bool = True, max_error_count: int = 5) -> str:
+                  headless: bool = True, max_error_count: int = 5,
+                  max_id='', proxy=None) -> str:
     '''
     --- get followers and save to db ---
     username = username for authentication
@@ -21,9 +22,10 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
     insta = InstaDM(
         username=username,
         password=password,
-        headless=headless
+        headless=headless,
+        proxy=proxy
         )
-    res = insta.getFollowers(user=user)
+    res = insta.getFollowers(user=user, max_id=max_id)
     if res:
         fetched_followers = len(res[0][:count])
         next_max_id = res[1]
@@ -41,6 +43,7 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
     conn.commit()
     error_count = 0
     call_no = 1
+    print(">>>>>>>>>>>>>>>>> next_max_id:", next_max_id)
     while next_max_id and fetched_followers < count:
         if error_count == max_error_count:
             break
@@ -66,6 +69,7 @@ def get_followers(username: str, password: str, user: str, count: int = 1000,
             next_max_id = res[1]
             fetched_followers += len(res[0][:count])
             call_no += 1
+            print(">>>>>>>>>>>>>>>>> next_max_id:", next_max_id)
         else:
             error_count += 1
 

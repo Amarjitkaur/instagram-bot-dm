@@ -9,6 +9,10 @@ from instadm import InstaDM
 conn = sqlite3.connect('db/instabot.db')
 cursor = conn.cursor()
 
+message = """
+Message to send...
+"""
+
 with open('bot_accounts.json', 'r') as bots_file:
     bot_accounts = json.load(bots_file)
 

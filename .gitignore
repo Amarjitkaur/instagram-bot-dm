@@ -223,3 +223,4 @@ test.py
 creds/
 db/*.db
 proxies_list.txt
+message_to_send.py

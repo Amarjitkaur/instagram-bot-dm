@@ -66,7 +66,10 @@ class InstaDM(object):
         #     "sslProxy":proxy,
         #     "proxyType":"MANUAL",
         # }
-        options.add_argument('--proxy-server=http://%s' % proxy)
+        # proxy setting
+        self.curr_proxy = proxy
+        if proxy:
+            options.add_argument('--proxy-server=http://%s' % proxy)
         # options.add_argument('--proxy-server=ftp://%s' % proxy)
         # options.add_argument('--proxy-server=ssl://%s' % proxy)
         self.driver = webdriver.Chrome(executable_path=CM().install(), options=options)
@@ -149,7 +152,8 @@ class InstaDM(object):
             self.__random_sleep__(3 , 5)
 
         if self.__wait_for_element__(self.selectors['textarea'], "xpath"):
-            self.__type_slow__(self.selectors['textarea'], "xpath", message)
+            # self.__type_slow__(self.selectors['textarea'], "xpath", message)
+            self.driver.find_element_by_xpath(self.selectors['textarea']).send_keys(message)
             self.__random_sleep__(3 , 5)
 
         if self.__wait_for_element__(self.selectors['send'], "xpath"):
@@ -184,7 +188,7 @@ class InstaDM(object):
                 else:
                     self.typeMessage(user, message)
                 
-                save_message(self.bot_name, user, message)
+                save_message(self.bot_name, user, message, self.curr_proxy)
                 self.__random_sleep__(2 , 5)
 
                 return True
@@ -294,7 +298,6 @@ class InstaDM(object):
     def getFollowers(self , user, max_id=''):
         '''
         user  : IG username
-        count : number of followers to get per api call (MAX = 10000)
         max_id : pass max_id to get next results
         '''
         count = 10000 # number of accounts to fetch in each api call

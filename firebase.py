@@ -15,13 +15,14 @@ def get_messages():
     return messages
 
 
-def save_message(bot, username, message):
+def save_message(bot, username, message, proxy=None):
     firestore_db.collection(u'messages').add({
         u'bot': bot,
         u'username': username,
         u'message': message,
         u'sent_at':
-        datetime.datetime.now()
+        datetime.datetime.now(),
+        u'proxy': proxy
     })
 
 
