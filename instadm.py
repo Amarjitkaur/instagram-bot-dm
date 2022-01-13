@@ -28,7 +28,7 @@ USER_AGENTS = [
 # PROXY = ''
 class InstaDM(object):
 
-    def __init__(self, username, password, headless=True, instapy_workspace=None, profileDir=None, proxy=None):
+    def __init__(self, username, password, headless=True, instapy_workspace=None, profileDir=None, proxy=None, cookies=None):
         self.selectors = {
             "accept_cookies": "//button[text()='Accept All']",
             "home_to_login_button": "//button[text()='Log In']",
@@ -44,6 +44,10 @@ class InstaDM(object):
             "send": "//button[text()='Send']",
             "not_now_notification":"/html/body/div[6]/div/div/div/div[3]/button[2]",
         }
+
+        # by default set logged in to false
+        self.is_logged_in = False
+        self.bot_name = username
 
         # Selenium config
         options = webdriver.ChromeOptions()
@@ -103,14 +107,16 @@ class InstaDM(object):
 
         try:
             self.__random_sleep__(1, 2)
-            self.login(username, password)
+            if cookies:
+                self.loadCookies(cookies)
+            else:
+                self.login(username, password)
         except Exception as e:
             logging.error(e)
             print(str(e))
 
     def login(self, username, password):
         # homepage
-        self.bot_name = username
         self.driver.get('https://instagram.com/?hl=en')
         self.__random_sleep__(3, 5)
         if self.__wait_for_element__(self.selectors['accept_cookies'], 'xpath', 10):
@@ -118,7 +124,7 @@ class InstaDM(object):
             self.__random_sleep__(3, 5)
         if self.__wait_for_element__(self.selectors['home_to_login_button'], 'xpath', 10):
             self.__get_element__(self.selectors['home_to_login_button'], 'xpath').click()
-            self.__random_sleep__(3, 5)
+            self.__random_sleep__(5, 12)
 
         # login
         logging.info(f'Login with {username}')
@@ -129,11 +135,22 @@ class InstaDM(object):
             self.driver.find_element_by_name(self.selectors['username_field']).send_keys(username)
             self.driver.find_element_by_name(self.selectors['password_field']).send_keys(password)
             self.__get_element__(self.selectors['button_login'], 'xpath').click()
-            self.__random_sleep__(3, 5)
+            self.__random_sleep__(5, 8)
             if self.__wait_for_element__(self.selectors['login_check'], 'xpath', 10):
                 print('Login Successful')
+                self.is_logged_in = True
             else:
                 print('Login Failed: Incorrect credentials')
+    
+    def loadCookies(self, cookies):
+        print('################ Loading cookies ################')
+        self.driver.get('https://instagram.com/')
+        sleep(10)
+        for cookie in cookies:
+            self.driver.add_cookie(cookie)
+        self.is_logged_in = True
+        self.driver.refresh()
+        self.__random_sleep__(5, 8)
 
     def createCustomGreeting(self, greeting):
         # Get username and add custom greeting
@@ -149,30 +166,30 @@ class InstaDM(object):
         # Go to page and type message
         if self.__wait_for_element__(self.selectors['next_button'], "xpath"):
             self.__get_element__(self.selectors['next_button'], "xpath").click()
-            self.__random_sleep__(3 , 5)
+            self.__random_sleep__(5 , 12)
 
         if self.__wait_for_element__(self.selectors['textarea'], "xpath"):
             # self.__type_slow__(self.selectors['textarea'], "xpath", message)
             self.driver.find_element_by_xpath(self.selectors['textarea']).send_keys(message)
-            self.__random_sleep__(3 , 5)
+            self.__random_sleep__(5 , 9)
 
         if self.__wait_for_element__(self.selectors['send'], "xpath"):
             self.__get_element__(self.selectors['send'], "xpath").click()
-            self.__random_sleep__(3, 5)
+            self.__random_sleep__(5 , 12)
             print('Message sent successfully')
 
     def sendMessage(self, user, message, greeting=None):
         logging.info(f'Send message to {user}')
         print(f'Send message to {user}')
         self.driver.get('https://www.instagram.com/direct/new/?hl=en')
-        self.__random_sleep__(3, 5)
+        self.__random_sleep__(4, 8)
         if self.__wait_for_element__(self.selectors['not_now_notification'], 'xpath', 3):
             self.__get_element__(self.selectors['not_now_notification'], 'xpath').click()
-            self.__random_sleep__(3, 5)
+            self.__random_sleep__(5 , 8)
         try:
             self.__wait_for_element__(self.selectors['search_user'], "name")
             self.__type_slow__(self.selectors['search_user'], "name", user)
-            self.__random_sleep__(3, 5)
+            self.__random_sleep__(4, 7)
 
             if greeting != None:
                 greeting = self.createCustomGreeting(greeting)
@@ -181,7 +198,7 @@ class InstaDM(object):
             elements = self.driver.find_elements_by_xpath(self.selectors['select_user'].format(user))
             if elements and len(elements) > 0:
                 elements[0].click()
-                self.__random_sleep__(3 , 5)
+                self.__random_sleep__(5 , 12)
 
                 if greeting != None:
                     self.typeMessage(user, greeting + message)
@@ -189,7 +206,7 @@ class InstaDM(object):
                     self.typeMessage(user, message)
                 
                 save_message(self.bot_name, user, message, self.curr_proxy)
-                self.__random_sleep__(2 , 5)
+                self.__random_sleep__(5 , 12)
 
                 return True
 
@@ -249,7 +266,7 @@ class InstaDM(object):
         actions.send_keys(Keys.TAB*2 + Keys.ENTER).perform()
         actions.send_keys(Keys.TAB*4 + Keys.ENTER).perform()
 
-            
+
         if self.__wait_for_element__(f"//a[@href='/direct/t/{chatID}']", 'xpath', 10):
             self.__get_element__(f"//a[@href='/direct/t/{chatID}']", 'xpath').click()
             self.__random_sleep__(3, 5)

@@ -9,11 +9,9 @@ from instadm import InstaDM
 conn = sqlite3.connect('db/instabot.db')
 cursor = conn.cursor()
 
-message = """
-Message to send...
-"""
+message = """Thought you'd be a perfect fit for Peach (@Peach_Platform), the revolutionary new platform for paid content. Launching Jan 17th. Service fees are HALF as much as only fans (10%). Offering in-platform management, fully automate your account with our managers running your accounts for you. Only an extra 15% fee! Powerful referral program: Get 2% commission from all referred creators for life! Not just for a year. You'll also have the opportunity to get involved with crypto and NFTs as we will be adding those features shortly after launching. If you'd like to learn more, send our main page a DM and follow so you can stay updated ❤"""  # noqa
 
-with open('bot_accounts.json', 'r') as bots_file:
+with open('bots.json', 'r') as bots_file:
     bot_accounts = json.load(bots_file)
 
 with open('proxies_list.txt', 'r') as proxies_file:
@@ -78,48 +76,62 @@ def send_msg(bot):
     """
     get a follower from db and send message to him
     """
-    passowrd = [i.get('password')
-                for i in bot_accounts if i.get('username') == bot]
-    if len(passowrd) < 1:
-        print("No password found for bot - {}. skipping process".format(bot))
-        return
-    passowrd = passowrd[0]
+    # passowrd = [i.get('password')
+    #             for i in bot_accounts if i.get('username') == bot]
+    # if len(passowrd) < 1:
+    #     print("No password found for bot - {}. skipping process".format(bot))
+    #     return
+    # passowrd = passowrd[0]
+    passowrd = bot.get('password')
     proxy = get_proxy()
     if not proxy:
-        print("No proxy found. skipping process for bot", bot)
+        print("No proxy found. skipping process for bot", bot.get('username'))
         return
     insta = InstaDM(
-        username=bot,
+        username=bot.get('username'),
         password=passowrd,
         headless=False,
-        proxy=proxy
+        proxy=proxy,
+        cookies=bot.get('cookies')
         )
+    if not insta.is_logged_in:
+        print("""
+            ######################################################
+            ##############  Login failed for bot {} ##############
+            ######################################################
+        """.format(bot.get('username')))
+        insta.teardown()
+        return
     message_sent = 0
     follower = get_follower()
     while follower:
-        print("Bot - {} sending message to {}".format(bot, follower[0]))
-        insta.sendMessage(user=follower[0], message="hey")
+        print(
+            "Bot - {} sending message to {}"
+            .format(bot.get('username'), follower[0])
+            )
+        insta.sendMessage(user=follower[0], message=message)
         message_sent += 1
-        if message_sent >= 50:
+        if message_sent >= 3:  # send 50 messages per bot then change proxy
             print(
                 """####################
                 Bot - {} has sent {} messages. updating proxy
                 ####################"""
-                .format(bot, message_sent))
+                .format(bot.get('username'), message_sent)
+                )
             insta.teardown()
             send_msg(bot)
             break
         follower = get_follower()
-    print("Stopping bot : ", bot)
+    print("Stopping bot : ", bot.get('username'))
 
 
 if __name__ == '__main__':
     # usernames = get_usernames("onlyfans__followers.csv")
     # usernames = ["hardeep.io", "jain7_nd", "rajput__mandeep", "indr_preet__"]
-    bots = [i.get('username') for i in bot_accounts]
+    # bots = [i.get('username') for i in bot_accounts]
     # accounts_lists = get_accounts_list_per_bot(usernames, bots)
     print('starting ==========')
     start = time.time()
-    with multiprocessing.Pool(len(bots)) as p:
-        p.map(send_msg, bots)
+    with multiprocessing.Pool(len(bot_accounts)) as p:
+        p.map(send_msg, bot_accounts)
     print(time.time() - start)
