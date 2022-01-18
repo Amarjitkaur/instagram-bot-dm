@@ -9,7 +9,9 @@ from instadm import InstaDM
 conn = sqlite3.connect('db/instabot.db')
 cursor = conn.cursor()
 
-message = """Thought you'd be a perfect fit for Peach (@Peach_Platform), the revolutionary new platform for paid content. Launching Jan 17th. Service fees are HALF as much as only fans (10%). Offering in-platform management, fully automate your account with our managers running your accounts for you. Only an extra 15% fee! Powerful referral program: Get 2% commission from all referred creators for life! Not just for a year. You'll also have the opportunity to get involved with crypto and NFTs as we will be adding those features shortly after launching. If you'd like to learn more, send our main page a DM and follow so you can stay updated ❤"""  # noqa
+message = """msg to send"""  # noqa
+
+post_url = 'post url here'  # noqa
 
 with open('bots.json', 'r') as bots_file:
     bot_accounts = json.load(bots_file)
@@ -102,26 +104,31 @@ def send_msg(bot):
         """.format(bot.get('username')))
         insta.teardown()
         return
-    message_sent = 0
-    follower = get_follower()
-    while follower:
+    # message_sent = 0
+    FOLLOWERS_PER_BOT = 2
+    followers = []
+    for _ in range(FOLLOWERS_PER_BOT):
+        follower = get_follower()
+        if follower:
+            followers.append(follower)
+    insta.forwardPost(post_url, [i[0] for i in followers])
+    for follower in followers:
         print(
             "Bot - {} sending message to {}"
             .format(bot.get('username'), follower[0])
             )
         insta.sendMessage(user=follower[0], message=message)
-        message_sent += 1
-        if message_sent >= 3:  # send 50 messages per bot then change proxy
-            print(
-                """####################
-                Bot - {} has sent {} messages. updating proxy
-                ####################"""
-                .format(bot.get('username'), message_sent)
-                )
-            insta.teardown()
-            send_msg(bot)
-            break
-        follower = get_follower()
+        # message_sent += 1
+        # if message_sent >= 3:  # send 3 messages per bot then change proxy
+        #     print(
+        #         """####################
+        #         Bot - {} has sent {} messages. updating proxy
+        #         ####################"""
+        #         .format(bot.get('username'), message_sent)
+        #         )
+        #     insta.teardown()
+        #     send_msg(bot)
+        #     break
     print("Stopping bot : ", bot.get('username'))
 
 

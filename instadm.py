@@ -42,7 +42,9 @@ class InstaDM(object):
             "next_button": "//button/*[text()='Next']",
             "textarea": "//textarea[@placeholder]",
             "send": "//button[text()='Send']",
+            "send_separately": "/html/body/div[6]/div/div/div[2]/div[4]/button",
             "not_now_notification":"/html/body/div[6]/div/div/div/div[3]/button[2]",
+            "forward_post_btn":'//*[@id="react-root"]/section/main/div/div[1]/article/div/div[3]/div/div/section[1]/span[3]/button',
         }
 
         # by default set logged in to false
@@ -115,13 +117,16 @@ class InstaDM(object):
             logging.error(e)
             print(str(e))
 
+    def acceptCookies(self):
+        if self.__wait_for_element__(self.selectors['accept_cookies'], 'xpath', 10):
+            self.__get_element__(self.selectors['accept_cookies'], 'xpath').click()
+            self.__random_sleep__(3, 5)
+
     def login(self, username, password):
         # homepage
         self.driver.get('https://instagram.com/?hl=en')
         self.__random_sleep__(3, 5)
-        if self.__wait_for_element__(self.selectors['accept_cookies'], 'xpath', 10):
-            self.__get_element__(self.selectors['accept_cookies'], 'xpath').click()
-            self.__random_sleep__(3, 5)
+        self.acceptCookies()
         if self.__wait_for_element__(self.selectors['home_to_login_button'], 'xpath', 10):
             self.__get_element__(self.selectors['home_to_login_button'], 'xpath').click()
             self.__random_sleep__(5, 12)
@@ -145,7 +150,8 @@ class InstaDM(object):
     def loadCookies(self, cookies):
         print('################ Loading cookies ################')
         self.driver.get('https://instagram.com/')
-        sleep(10)
+        self.__random_sleep__(5, 8)
+        self.acceptCookies()
         for cookie in cookies:
             self.driver.add_cookie(cookie)
         self.is_logged_in = True
@@ -170,7 +176,16 @@ class InstaDM(object):
 
         if self.__wait_for_element__(self.selectors['textarea'], "xpath"):
             # self.__type_slow__(self.selectors['textarea'], "xpath", message)
-            self.driver.find_element_by_xpath(self.selectors['textarea']).send_keys(message)
+            # self.driver.find_element_by_xpath(self.selectors['textarea']).send_keys(message)
+            for line in message.split('\n'):
+                self.driver.execute_script('''
+                    document.evaluate(
+                    '{}',
+                    document
+                ).iterateNext().value += '{}';
+                '''.format(self.selectors['textarea'],line))
+                self.driver.find_element_by_xpath(self.selectors['textarea']).send_keys(Keys.SHIFT + Keys.ENTER)
+                self.driver.find_element_by_xpath(self.selectors['textarea']).send_keys(Keys.SHIFT + Keys.ENTER)
             self.__random_sleep__(5 , 9)
 
         if self.__wait_for_element__(self.selectors['send'], "xpath"):
@@ -244,7 +259,6 @@ class InstaDM(object):
                     self.__random_sleep__()
                 else:
                     print(f'User {user} not found! Skipping.')
-
             self.typeMessage(user, message)
             # self.__random_sleep__(50, 60)
             # self.__random_sleep__(50, 60)
@@ -289,6 +303,35 @@ class InstaDM(object):
         
         except Exception as e:
             logging.error(e)
+            return False
+    
+    def forwardPost(self, post_url, users):
+        self.driver.get(post_url)
+        self.__random_sleep__(4,7)
+        if self.__wait_for_element__(self.selectors['forward_post_btn'],'xpath'):
+            self.__get_element__(self.selectors['forward_post_btn'],'xpath').click()
+            for user in users:
+                self.__wait_for_element__(self.selectors['search_user'], "name")
+                self.__get_element__(self.selectors['search_user'], "name").send_keys(Keys.CONTROL + "a")
+                self.__get_element__(self.selectors['search_user'], "name").send_keys(Keys.DELETE)
+                self.__type_slow__(self.selectors['search_user'], "name", user)
+                self.__random_sleep__(4,7)
+
+                # Select user from list
+                elements = self.driver.find_elements_by_xpath(self.selectors['select_user'].format(user))
+                self.__random_sleep__(4,7)
+                if elements and len(elements) > 0:
+                    elements[0].click()
+                    self.__random_sleep__()
+                else:
+                    print(f'User {user} not found! Skipping.')
+            if self.__wait_for_element__(self.selectors['send_separately'], "xpath"):
+                self.__get_element__(self.selectors['send_separately'], "xpath").click()
+                self.__random_sleep__(5 , 12)
+                print('Post forwarded successfully')
+                
+        else:
+            logging.error('Forward post button not found !')
             return False
 
     @lru_cache
